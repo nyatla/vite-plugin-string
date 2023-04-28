@@ -26,13 +26,25 @@ export default function (userOptions: Options = {}): Plugin {
     const filter = createFilter(options.include, options.exclude)
 
     const compress = options.compress === true ? defaultCompress : options.compress
-
+    let transform_opt=options.transform || ((code) => code)
+    
+    switch(options.transform){
+        case 'base64':
+            transform_opt=(source,id)=>{
+                return `data:application/wasm;base64,${Buffer.from(source).toString('base64')}`
+            }   
+            break;
+        default:
+            break;
+    }
     return {
         name: 'vite-plugin-string',
         async transform(source, id) {
             if (!filter(id)) return
+            
+            const transformedSource = await transform_opt(source, id)
 
-            return dataToEsm(compress ? await compress(source) : source)
+            return dataToEsm(compress ? await compress(transformedSource) : transformedSource)
         },
     }
 }
